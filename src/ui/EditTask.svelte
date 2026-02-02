@@ -101,6 +101,80 @@
         const newTasks = await editableTask.applyEdits(task, allTasks);
         onSubmit(newTasks);
     };
+
+    let suggestions: string[] = [];
+    let activeSuggestionsKind: 'link' | 'tag' | null = null;
+    let suggestionsQuery = '';
+    let caret = 0;
+
+    function _autoSuggest(e: Event) {
+        // value is already synced via bind:value, but we still read caret
+        const el = e.target as HTMLTextAreaElement;
+        caret = el.selectionStart ?? 0;
+
+        const ctx = extractTriggerContext(editableTask.description, caret);
+        activeSuggestionsKind = ctx?.kind ?? null;
+        suggestionsQuery = ctx?.query ?? '';
+
+        if (!activeSuggestionsKind) {
+            suggestions = [];
+            return;
+        }
+        const list = getSuggestions(activeSuggestionsKind);
+        suggestions = filterSuggestions(list, suggestionsQuery);
+        console.log(suggestions);
+    }
+
+    function getSuggestions(type: 'link' | 'tag') {
+        // TODO: this should somehow get the tags or links from the app
+        // for testing purposes, we will simply use the lists below
+        switch (type) {
+            case 'link':
+                return ['foo', 'bar', 'baz'];
+            case 'tag':
+                return ['spam', 'eggs', 'bacon'];
+            default:
+                throw new Error("type must be one of 'link' or 'tag'");
+        }
+    }
+
+    function extractTriggerContext(text: string, caret: number) {
+        /* Look back from caret to find the nearest trigger that is still “open”
+         *  - For links: `[[` not yet closed by `]]`
+         *  - For tags: `#` start until a separator (space, punctuation, newline)
+         */
+        const left = text.slice(0, caret);
+        // const right = text.slice(caret);
+
+        // Check for link trigger `[[`
+        const openLinkIdx = left.lastIndexOf('[[');
+        const closeLinkIdx = left.lastIndexOf(']]');
+        if (openLinkIdx !== -1 && openLinkIdx > closeLinkIdx) {
+            const after = left.slice(openLinkIdx + 2); // text after [[
+            const query = after.replace(/\n/g, '');
+            return { kind: 'link' as const, query, start: openLinkIdx + 2, end: caret };
+        }
+
+        // Check for tag trigger `#`
+        // Find a '#' that is not preceded by another non-space word char (basic heuristic)
+        const hashIdx = left.lastIndexOf('#');
+        if (hashIdx !== -1) {
+            // ensure no whitespace/newline between # and caret
+            const afterHash = left.slice(hashIdx + 1);
+            if (!afterHash.match(/[\s]/)) {
+                const query = afterHash;
+                return { kind: 'tag' as const, query, start: hashIdx + 1, end: caret };
+            }
+        }
+
+        return null;
+    }
+
+    function filterSuggestions(all: string[], q: string) {
+        const needle = q.toLowerCase();
+        if (!needle) return all.slice(0, 20);
+        return all.filter((x) => x.toLowerCase().includes(needle)).slice(0, 20);
+    }
 </script>
 
 <!--
@@ -150,6 +224,7 @@ Availability of access keys:
             class="tasks-modal-description"
             placeholder="Take out the trash"
             accesskey={accesskey('t')}
+            on:input={_autoSuggest}
             on:keydown={_onDescriptionKeyDown}
             on:paste={_removeLinebreaksFromDescription}
             on:drop={_removeLinebreaksFromDescription}
