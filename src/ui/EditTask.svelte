@@ -19,6 +19,8 @@
     export let onSubmit: (updatedTasks: Task[]) => void | Promise<void>;
     export let statusOptions: Status[];
     export let allTasks: Task[];
+    export let allTags: string[];
+    export let allLinks: string[];
 
     const {
         // NEW_TASK_FIELD_EDIT_REQUIRED
@@ -82,9 +84,36 @@
     };
 
     const _onDescriptionKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.isComposing) {
+        if (e.key === 'Enter' && !e.isComposing && suggestions.length === 0) {
             e.preventDefault();
             if (formIsValid) _onSubmit();
+        }
+
+        if (suggestions.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = (selectedIndex + 1) % suggestions.length;
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = (selectedIndex - 1 + suggestions.length) % suggestions.length;
+                return;
+            }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                acceptSuggestion(suggestions[selectedIndex]);
+                return;
+            }
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                acceptSuggestion(suggestions[selectedIndex]);
+                return;
+            }
+            if (e.key === 'Escape') {
+                suggestions = [];
+                return;
+            }
         }
     };
 
@@ -106,6 +135,8 @@
     let activeSuggestionsKind: 'link' | 'tag' | null = null;
     let suggestionsQuery = '';
     let caret = 0;
+    let dropdownTop = 0;
+    let dropdownLeft = 0;
 
     function _autoSuggest(e: Event) {
         // value is already synced via bind:value, but we still read caret
@@ -114,27 +145,28 @@
 
         const ctx = extractTriggerContext(editableTask.description, caret);
         activeSuggestionsKind = ctx?.kind ?? null;
-        suggestionsQuery = ctx?.query ?? '';
-
         if (!activeSuggestionsKind) {
             suggestions = [];
             return;
         }
-        const list = getSuggestions(activeSuggestionsKind);
-        suggestions = filterSuggestions(list, suggestionsQuery);
-        console.log(suggestions);
-    }
 
-    function getSuggestions(type: 'link' | 'tag') {
-        // TODO: this should somehow get the tags or links from the app
-        // for testing purposes, we will simply use the lists below
-        switch (type) {
+        suggestionsQuery = ctx?.query ?? '';
+        switch (activeSuggestionsKind) {
             case 'link':
-                return ['foo', 'bar', 'baz'];
+                suggestions = filterSuggestions(allLinks, suggestionsQuery);
+                break;
             case 'tag':
-                return ['spam', 'eggs', 'bacon'];
+                suggestions = filterSuggestions(allTags, suggestionsQuery);
+                break;
             default:
                 throw new Error("type must be one of 'link' or 'tag'");
+        }
+        // display suggestions
+
+        if (suggestions.length > 0) {
+            const coords = getRelativeCoordinates(descriptionInput, ctx?.start ?? caret);
+            dropdownTop = coords.top + 20;
+            dropdownLeft = coords.left;
         }
     }
 
@@ -174,6 +206,60 @@
         const needle = q.toLowerCase();
         if (!needle) return all.slice(0, 20);
         return all.filter((x) => x.toLowerCase().includes(needle)).slice(0, 20);
+    }
+
+    let selectedIndex = 0;
+
+    function acceptSuggestion(s: string) {
+        const ctx = extractTriggerContext(editableTask.description, caret);
+        if (!ctx) return;
+
+        const before = editableTask.description.slice(0, ctx.start);
+        const after = editableTask.description.slice(ctx.end);
+
+        const inserted = activeSuggestionsKind === 'link' ? `${s}]]` : s;
+
+        editableTask.description = before + inserted + after;
+
+        // move caret after inserted text
+        queueMicrotask(() => {
+            const pos = before.length + inserted.length;
+            descriptionInput.setSelectionRange(pos, pos);
+            descriptionInput.focus();
+        });
+
+        suggestions = [];
+        selectedIndex = 0;
+    }
+
+    let mirror: HTMLDivElement;
+
+    function getRelativeCoordinates(textarea: HTMLTextAreaElement, position: number) {
+        /**
+         * Creates a mirror element to calculate its position, then
+         * calculates relative offset from textarea up to `position`.
+         */
+        const style = getComputedStyle(textarea);
+        console.log(style);
+        const props = ['font-size', 'font-family', 'line-height', 'padding', 'border', 'white-space'];
+
+        props.forEach((prop: string) => {
+            const propStyle = style.getPropertyValue(prop);
+            mirror.style.setProperty(prop, propStyle);
+        });
+        const textRect = textarea.getBoundingClientRect();
+
+        const before = textarea.value.substring(0, position);
+        mirror.textContent = before.replace(/\n$/, '\n-'); // trick for newlines
+
+        const span = document.createElement('span');
+        span.textContent = textarea.value.substring(position) || '.';
+        mirror.appendChild(span);
+
+        const rect = span.getBoundingClientRect();
+        mirror.removeChild(span);
+
+        return { top: rect.bottom - textRect.top, left: rect.right - textRect.left };
     }
 </script>
 
@@ -217,6 +303,16 @@ Availability of access keys:
     <section class="tasks-modal-description-section">
         <label for="description">{@html labelContentWithAccessKey('Description', accesskey('t'))}</label>
         <!-- svelte-ignore a11y-accesskey -->
+
+        {#if suggestions.length > 0}
+            <ul class="tasks-autocomplete" style="left: {dropdownLeft}px; top: {dropdownTop}px;">
+                {#each suggestions as s, i}
+                    <li class:selected={i === selectedIndex} on:mousedown={() => acceptSuggestion(s)}>
+                        {s}
+                    </li>
+                {/each}
+            </ul>
+        {/if}
         <textarea
             bind:value={editableTask.description}
             bind:this={descriptionInput}
@@ -229,6 +325,7 @@ Availability of access keys:
             on:paste={_removeLinebreaksFromDescription}
             on:drop={_removeLinebreaksFromDescription}
         />
+        <div class="textarea-mirror" bind:this={mirror} />
     </section>
 
     <!-- --------------------------------------------------------------------------- -->

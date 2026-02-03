@@ -224,3 +224,34 @@
         }
     }
 }
+
+.tasks-autocomplete {
+    position: absolute;
+    border-radius: var(--radius-s);
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    padding: 4px 4px;
+    margin-top: 2px;
+    list-style: none;
+    z-index: 9999;
+    max-height: 200px;
+    overflow-y: auto;
+    width: 300px; /* adjust or compute */
+}
+
+.tasks-autocomplete li {
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.tasks-autocomplete li.selected {
+    border-radius: var(--radius-s);
+    background: var(--color-base-30);
+}
+
+.textarea-mirror {
+    position: absolute;
+    white-space: pre-wrap;
+    visibility: hidden;
+    z-index: -9999;
+}

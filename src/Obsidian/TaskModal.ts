@@ -33,6 +33,26 @@ export class TaskModal extends Modal {
         };
     }
 
+    private getMarkdownFiles(): string[] {
+        return this.app.vault.getMarkdownFiles().map((e) => e.name);
+    }
+
+    private getAllTags() {
+        const mdFiles = this.getMarkdownFiles();
+        const allTags: Set<string> = new Set<string>();
+        mdFiles.forEach((fileName) => {
+            const tags = this.app.metadataCache.getCache(fileName)?.tags;
+            // loop over all tags and split off the `#`
+            tags?.forEach((t) => allTags.add(t.tag.substring(1)));
+        });
+        // cast to list
+        return [...allTags];
+    }
+
+    private getAllLinks() {
+        return this.getMarkdownFiles().map((e) => e.substring(0, e.length - 3));
+    }
+
     public onOpen(): void {
         this.titleEl.setText('Create or edit Task');
         this.modalEl.style.paddingBottom = '0';
@@ -66,6 +86,8 @@ export class TaskModal extends Modal {
                 statusOptions: statusOptions,
                 onSubmit: this.onSubmit,
                 allTasks: this.allTasks,
+                allLinks: this.getAllLinks(),
+                allTags: this.getAllTags(),
             },
         });
     }

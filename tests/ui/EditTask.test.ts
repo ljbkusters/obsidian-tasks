@@ -45,12 +45,20 @@ function constructSerialisingOnSubmit(task: Task) {
     return { waitForClose, onSubmit };
 }
 
-function renderAndCheckModal(task: Task, onSubmit: (updatedTasks: Task[]) => void, allTasks = [task]) {
+function renderAndCheckModal(
+    task: Task,
+    onSubmit: (updatedTasks: Task[]) => void,
+    allTasks: Task[] = [task],
+    allLinks: string[] = [],
+    allTags: string[] = [],
+) {
     const result: RenderResult<EditTask> = render(EditTask, {
         task,
         statusOptions: StatusRegistry.getInstance().registeredStatuses,
         onSubmit,
         allTasks,
+        allLinks,
+        allTags,
     });
     const { container } = result;
     expect(() => container).toBeTruthy();
@@ -684,7 +692,9 @@ function verifyModalHTML() {
     const task = taskFromLine({ line: '- [ ] absolutely to do 🛫 2024-01-01 ⏳ 2024-02-33', path: '' });
     const onSubmit = () => {};
     const allTasks = [task];
-    const { container } = renderAndCheckModal(task, onSubmit, allTasks);
+    const allTags = ['foo', 'bar'];
+    const allLinks = ['link', 'zelda'];
+    const { container } = renderAndCheckModal(task, onSubmit, allTasks, allLinks, allTags);
 
     const prettyHTML = prettifyHTML(container.innerHTML);
     verifyWithFileExtension(prettyHTML, 'html');
