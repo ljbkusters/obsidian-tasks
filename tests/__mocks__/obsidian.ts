@@ -257,3 +257,20 @@ export class Modal {
     public onOpen(): void {}
     public onClose(): void {}
 }
+
+interface SearchResult {
+    score: number;
+    matches: number[][];
+}
+
+export function prepareFuzzySearch(query: string): (item: string) => SearchResult | null {
+    // mocked fuzzy search
+    return (item: string) => {
+        query = query.toLowerCase();
+        if (!query) return null;
+        if (item.toLowerCase().contains(query)) {
+            return { score: -1 / query.length, matches: [[0]] };
+        }
+        return null;
+    };
+}
