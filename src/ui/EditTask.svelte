@@ -1,5 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import type { SearchResult } from 'obsidian';
+    import { prepareFuzzySearch } from 'obsidian';
     import { defaultEditModalShowSettings } from '../Config/EditModalShowSettings';
 
     import { TASK_FORMATS, getSettings } from '../Config/Settings';
@@ -52,6 +54,17 @@
 
     let mountComplete = false;
 
+    type FuzzyMatchResult = {
+        item: string;
+        searchResult: SearchResult | null;
+    };
+    let suggestions: FuzzyMatchResult[] = [];
+    let activeSuggestionsKind: 'link' | 'tag' | null = null;
+    let suggestionsQuery = '';
+    let caret = 0;
+    let dropdownTop = 0;
+    let dropdownLeft = 0;
+
     $: accesskey = (key: string) => (withAccessKeys ? key : null);
     $: formIsValid =
         isDueDateValid &&
@@ -102,12 +115,12 @@
             }
             if (e.key === 'Enter') {
                 e.preventDefault();
-                acceptSuggestion(suggestions[selectedIndex]);
+                acceptSuggestion(suggestions[selectedIndex].item);
                 return;
             }
             if (e.key === 'Tab') {
                 e.preventDefault();
-                acceptSuggestion(suggestions[selectedIndex]);
+                acceptSuggestion(suggestions[selectedIndex].item);
                 return;
             }
             if (e.key === 'Escape') {
@@ -130,14 +143,6 @@
         const newTasks = await editableTask.applyEdits(task, allTasks);
         onSubmit(newTasks);
     };
-
-    let suggestions: string[] = [];
-    let activeSuggestionsKind: 'link' | 'tag' | null = null;
-    let suggestionsQuery = '';
-    let caret = 0;
-    let dropdownTop = 0;
-    let dropdownLeft = 0;
-
     function _autoSuggest(e: Event) {
         // value is already synced via bind:value, but we still read caret
         const el = e.target as HTMLTextAreaElement;
@@ -202,10 +207,23 @@
         return null;
     }
 
-    function filterSuggestions(all: string[], q: string) {
-        const needle = q.toLowerCase();
-        if (!needle) return all.slice(0, 20);
-        return all.filter((x) => x.toLowerCase().includes(needle)).slice(0, 20);
+    function filterSuggestions(candidates: string[], query: string): FuzzyMatchResult[] {
+        // handle case where search query is empty string
+        if (!query) {
+            return candidates.slice(0, 20).map((item) => {
+                return { item, searchResult: null };
+            });
+        }
+
+        const searchFn = prepareFuzzySearch(query);
+        return candidates
+            .map((item) => {
+                const res = searchFn(item);
+                return res == null ? null : { item, searchResult: res };
+            })
+            .filter((x): x is { item: string; searchResult: SearchResult } => x !== null)
+            .sort((a, b) => b.searchResult.score - a.searchResult.score)
+            .slice(0, 20);
     }
 
     let selectedIndex = 0;
@@ -240,7 +258,6 @@
          * calculates relative offset from textarea up to `position`.
          */
         const style = getComputedStyle(textarea);
-        console.log(style);
         const props = ['font-size', 'font-family', 'line-height', 'padding', 'border', 'white-space'];
 
         props.forEach((prop: string) => {
@@ -307,8 +324,8 @@ Availability of access keys:
         {#if suggestions.length > 0}
             <ul class="tasks-autocomplete" style="left: {dropdownLeft}px; top: {dropdownTop}px;">
                 {#each suggestions as s, i}
-                    <li class:selected={i === selectedIndex} on:mousedown={() => acceptSuggestion(s)}>
-                        {s}
+                    <li class:selected={i === selectedIndex} on:mousedown={() => acceptSuggestion(s.item)}>
+                        {s.item}
                     </li>
                 {/each}
             </ul>
