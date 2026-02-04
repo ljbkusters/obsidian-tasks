@@ -58,12 +58,42 @@
         item: string;
         searchResult: SearchResult | null;
     };
+    type FuzzyFragment = {
+        text: string;
+        bold: boolean;
+    };
     let suggestions: FuzzyMatchResult[] = [];
     let activeSuggestionsKind: 'link' | 'tag' | null = null;
     let suggestionsQuery = '';
     let caret = 0;
     let dropdownTop = 0;
     let dropdownLeft = 0;
+
+    /**
+     * Takes a FuzzyMatchResult and splits it into a list of FuzzyFragments
+     *
+     * Takes a FuzzyMatchResult, sees which parts are matched and then
+     * assigns a boolean value `true` to all matched substrings, and a
+     * boolean value `false` for all substrings which were not matched.
+     */
+    function fragmentFuzzyMatchResult(result: FuzzyMatchResult): FuzzyFragment[] {
+        if (result.searchResult == null) return [{ text: result.item, bold: false }];
+        const fragments: FuzzyFragment[] = [];
+        let head: number = 0;
+        result.searchResult.matches.forEach((match) => {
+            if (match[0] != head) {
+                // the head is currently not at a match, insert a non-match
+                fragments.push({ text: result.item.substring(head, match[0]), bold: false });
+            }
+            // insert a match
+            fragments.push({ text: result.item.substring(match[0], match[1]), bold: true });
+            head = match[1]; // potentially need a + 1 here;
+        });
+        if (head < result.item.length) {
+            fragments.push({ text: result.item.substring(head, result.item.length), bold: false });
+        }
+        return fragments;
+    }
 
     $: accesskey = (key: string) => (withAccessKeys ? key : null);
     $: formIsValid =
@@ -325,7 +355,13 @@ Availability of access keys:
             <ul class="tasks-autocomplete" style="left: {dropdownLeft}px; top: {dropdownTop}px;">
                 {#each suggestions as s, i}
                     <li class:selected={i === selectedIndex} on:mousedown={() => acceptSuggestion(s.item)}>
-                        {s.item}
+                        {#each fragmentFuzzyMatchResult(s) as f}
+                            {#if f.bold}
+                                <strong>{f.text}</strong>
+                            {:else}
+                                {f.text}
+                            {/if}
+                        {/each}
                     </li>
                 {/each}
             </ul>
