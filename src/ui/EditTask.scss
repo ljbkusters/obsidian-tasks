@@ -226,7 +226,7 @@
 }
 
 .tasks-autocomplete {
-    position: absolute;
+    position: fixed;
     border-radius: var(--radius-s);
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
@@ -236,7 +236,10 @@
     z-index: 9999;
     max-height: 200px;
     overflow-y: auto;
-    max-width: 300px;
+    width: var(--popover-width);
+    max-width: var(--popover-max-width);
+    max-height: var(--popover-max-height);
+    font-size: var(--popover-font-size);
 }
 
 .tasks-autocomplete li {
@@ -252,6 +255,7 @@
 .textarea-mirror {
     position: absolute;
     white-space: pre-wrap;
+    word-wrap: break-word;
     visibility: hidden;
     z-index: -9999;
 }

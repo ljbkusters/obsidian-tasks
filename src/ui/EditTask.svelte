@@ -282,31 +282,50 @@
 
     let mirror: HTMLDivElement;
 
-    function getRelativeCoordinates(textarea: HTMLTextAreaElement, position: number) {
-        /**
-         * Creates a mirror element to calculate its position, then
-         * calculates relative offset from textarea up to `position`.
-         */
-        const style = getComputedStyle(textarea);
-        const props = ['font-size', 'font-family', 'line-height', 'padding', 'border', 'white-space'];
+    /**
+     * Creates a mirror element to calculate its position, then
+     * calculates relative offset from textarea up to `position`.
+     */
+    function getRelativeCoordinates(textArea: HTMLTextAreaElement, position: number) {
+        const style = getComputedStyle(textArea);
+        const props = [
+            'box-sizing',
+            'width',
+            'font-size',
+            'font-family',
+            'font-weight',
+            'font-style',
+            'line-height',
+            'letter-spacing',
+            'text-indent',
+            'padding-top',
+            'padding-right',
+            'padding-bottom',
+            'padding-left',
+            'border-left-width',
+            'border-right-width',
+            'border-top-width',
+            'border-bottom-width',
+            'white-space',
+        ];
 
         props.forEach((prop: string) => {
             const propStyle = style.getPropertyValue(prop);
             mirror.style.setProperty(prop, propStyle);
         });
-        const textRect = textarea.getBoundingClientRect();
 
-        const before = textarea.value.substring(0, position);
-        mirror.textContent = before.replace(/\n$/, '\n-'); // trick for newlines
+        const before = textArea.value.substring(0, position);
+        const after = textArea.value.substring(position);
+        mirror.textContent = before.replace(/\n$/, '\n-');
 
         const span = document.createElement('span');
-        span.textContent = textarea.value.substring(position) || '.';
+        span.textContent = after || '.';
         mirror.appendChild(span);
 
         const rect = span.getBoundingClientRect();
         mirror.removeChild(span);
 
-        return { top: rect.bottom - textRect.top, left: rect.right - textRect.left };
+        return { top: rect.top, left: rect.left };
     }
 </script>
 
@@ -366,6 +385,7 @@ Availability of access keys:
                 {/each}
             </ul>
         {/if}
+        <div class="textarea-mirror" bind:this={mirror} />
         <textarea
             bind:value={editableTask.description}
             bind:this={descriptionInput}
@@ -378,7 +398,6 @@ Availability of access keys:
             on:paste={_removeLinebreaksFromDescription}
             on:drop={_removeLinebreaksFromDescription}
         />
-        <div class="textarea-mirror" bind:this={mirror} />
     </section>
 
     <!-- --------------------------------------------------------------------------- -->
