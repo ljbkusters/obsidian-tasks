@@ -13,12 +13,14 @@
     import PriorityEditor from './PriorityEditor.svelte';
     import RecurrenceEditor from './RecurrenceEditor.svelte';
     import StatusEditor from './StatusEditor.svelte';
+    import { EmbeddableMarkdownEditor, EmptyEditorProps } from './EmbeddableMarkdownEditor';
 
     // These exported variables are passed in as props by TaskModal.onOpen():
     export let task: Task;
     export let onSubmit: (updatedTasks: Task[]) => void | Promise<void>;
     export let statusOptions: Status[];
     export let allTasks: Task[];
+    export let app: App;
 
     const {
         // NEW_TASK_FIELD_EDIT_REQUIRED
@@ -30,7 +32,8 @@
         doneDateSymbol,
     } = TASK_FORMATS.tasksPluginEmoji.taskSerializer.symbols;
 
-    let descriptionInput: HTMLTextAreaElement;
+    let mdEditorElement: HTMLDivElement;
+    let mdEditor: EmbeddableMarkdownEditor;
 
     let editableTask = EditableTask.fromTask(task, allTasks);
 
@@ -72,12 +75,28 @@
 
         mountComplete = true;
 
+        const editorProps = new EmptyEditorProps();
+
+        mdEditor = new EmbeddableMarkdownEditor(app, mdEditorElement, {
+            value: `- [${editableTask.status.symbol}] ${editableTask.description}`,
+            onEnter: () => {
+                _onSubmit();
+                return true;
+            },
+        });
+        mdEditor.toggleSource();
+        console.log(mdEditor);
+        console.log(mdEditor.toggleSource);
+        mdEditor.onContextMenu = undefined;
+
         setTimeout(() => {
-            descriptionInput.focus();
+            mdEditorElement.focus();
+            mdEditor.toggleSource();
         }, 10);
     });
 
     const _onClose = () => {
+        mdEditor.destroy();
         onSubmit([]);
     };
 
@@ -143,7 +162,8 @@ Availability of access keys:
     <section class="tasks-modal-description-section">
         <label for="description">{@html labelContentWithAccessKey('Description', accesskey('t'))}</label>
         <!-- svelte-ignore a11y-accesskey -->
-        <textarea
+        <div class="tasks-modal-description" bind:this={mdEditorElement} accesskey={accesskey('t')} />
+        <!-- <textarea
             bind:value={editableTask.description}
             bind:this={descriptionInput}
             id="description"
@@ -153,7 +173,7 @@ Availability of access keys:
             on:keydown={_onDescriptionKeyDown}
             on:paste={_removeLinebreaksFromDescription}
             on:drop={_removeLinebreaksFromDescription}
-        />
+        /> -->
     </section>
 
     <!-- --------------------------------------------------------------------------- -->
