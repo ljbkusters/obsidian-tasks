@@ -122,6 +122,8 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
             }),
         );
 
+        if (!this.editor) throw new Error('The editor instance is undefined');
+
         // Execute onBlur when the editor loses focus
         // NOTE: Apparently Chrome does a weird thing where removing an element from the DOM triggers a blur event
         //         (Hence why the ._loaded check is necessary)
