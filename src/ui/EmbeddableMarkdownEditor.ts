@@ -109,7 +109,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
         this.owner.editMode = this;
         this.owner.editor = this.editor;
 
-        this.set(options.value || '');
+        this.set(options.value || '', false);
         this.register(
             around(this.app.workspace, {
                 // @ts-expect-error (Incorrectly matches the deprecated setActiveLeaf method)
