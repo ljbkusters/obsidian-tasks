@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { App } from 'obsidian';
     import { defaultEditModalShowSettings } from '../Config/EditModalShowSettings';
 
     import { TASK_FORMATS, getSettings } from '../Config/Settings';
@@ -13,7 +14,7 @@
     import PriorityEditor from './PriorityEditor.svelte';
     import RecurrenceEditor from './RecurrenceEditor.svelte';
     import StatusEditor from './StatusEditor.svelte';
-    import { EmbeddableMarkdownEditor, EmptyEditorProps } from './EmbeddableMarkdownEditor';
+    import { EmbeddableMarkdownEditor } from './EmbeddableMarkdownEditor';
 
     // These exported variables are passed in as props by TaskModal.onOpen():
     export let task: Task;
@@ -75,25 +76,36 @@
 
         mountComplete = true;
 
-        const editorProps = new EmptyEditorProps();
-
         mdEditor = new EmbeddableMarkdownEditor(app, mdEditorElement, {
-            value: `- [${editableTask.status.symbol}] ${editableTask.description}`,
+            value: `${editableTask.description}`,
+            placeholder: 'Take out the trash',
             onEnter: () => {
                 _onSubmit();
                 return true;
             },
+            onChange: (update) => {
+                if (!update.docChanged) return;
+                // NOTE: this causes undo to break because it replaces the last change
+                // but also causes a change thereby popping and pushing an event.
+                _removeLinebreaksFromDescription();
+                // _preventHeadingFormatting();
+                return true;
+            },
+            onEscape: () => _onClose(),
         });
-        mdEditor.toggleSource();
-        console.log(mdEditor);
-        console.log(mdEditor.toggleSource);
-        mdEditor.onContextMenu = undefined;
+        mdEditor.onEditorClick = (event: MouseEvent, element: HTMLElement | undefined) => {
+            console.log(event);
+        };
+        // set the cursor to the final character
+        mdEditor.editor?.setCursor(mdEditor.get().length);
+        _focusEditor();
+    });
 
+    const _focusEditor = () => {
         setTimeout(() => {
             mdEditorElement.focus();
-            mdEditor.toggleSource();
-        }, 10);
-    });
+        }, 0);
+    };
 
     const _onClose = () => {
         mdEditor.destroy();
@@ -107,16 +119,29 @@
         }
     };
 
-    // this is called, when text is pasted or dropped into
-    // the description field, to remove any linebreaks
+    // Prevents newlines
+    // If a newline is detected, we remove it by regex search and replace
     const _removeLinebreaksFromDescription = () => {
-        // wrapped into a timer to run after the paste/drop event
-        setTimeout(() => {
-            editableTask.description = editableTask.description.replace(/[\r\n]+/g, ' ');
-        }, 0);
+        // detect whether there are any break line characters
+        if (mdEditor.get().match(/[\r\n]+/g)) {
+            // wrapped into a timer to run after a paste/drop/insert
+            setTimeout(() => {
+                mdEditor.set(mdEditor.get().replace(/[\r\n]+/g, ' '), false);
+            }, 0);
+        }
+    };
+
+    // Prevents heading rendering by detecting if single line content starts with any valid markdown heading followed by a space. If so, removes the space.
+    // Visually this looks like you are not allowed to type a space after a `#`.
+    const _preventHeadingFormatting = () => {
+        // regex matches between 1 and 6 leading `#` symbols followed by a space
+        if (mdEditor.get().match(/^(#{1,6})\s/)) {
+            mdEditor.set(mdEditor.get().replace(/^(#{1,6})\s/, '$1'), false);
+        }
     };
 
     const _onSubmit = async () => {
+        editableTask.description = mdEditor.get();
         const newTasks = await editableTask.applyEdits(task, allTasks);
         onSubmit(newTasks);
     };
@@ -162,18 +187,7 @@ Availability of access keys:
     <section class="tasks-modal-description-section">
         <label for="description">{@html labelContentWithAccessKey('Description', accesskey('t'))}</label>
         <!-- svelte-ignore a11y-accesskey -->
-        <div class="tasks-modal-description" bind:this={mdEditorElement} accesskey={accesskey('t')} />
-        <!-- <textarea
-            bind:value={editableTask.description}
-            bind:this={descriptionInput}
-            id="description"
-            class="tasks-modal-description"
-            placeholder="Take out the trash"
-            accesskey={accesskey('t')}
-            on:keydown={_onDescriptionKeyDown}
-            on:paste={_removeLinebreaksFromDescription}
-            on:drop={_removeLinebreaksFromDescription}
-        /> -->
+        <div class="outer-div" bind:this={mdEditorElement} accesskey={accesskey('t')} />
     </section>
 
     <!-- --------------------------------------------------------------------------- -->

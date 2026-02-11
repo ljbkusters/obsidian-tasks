@@ -56,8 +56,6 @@ interface MarkdownEditorProps {
     onChange: (update: ViewUpdate) => void;
 }
 
-export class EmptyEditorProps implements Partial<MarkdownEditorProps> {}
-
 const defaultProperties: MarkdownEditorProps = {
     cursorLocation: { anchor: 0, head: 0 },
     value: '',
@@ -152,7 +150,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
     }
 
     get value() {
-        return this.editor.cm.state.doc.toString();
+        return this.editor?.cm.state.doc.toString();
     }
 
     onUpdate(update: ViewUpdate, changed: boolean) {
