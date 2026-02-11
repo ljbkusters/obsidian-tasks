@@ -33,8 +33,6 @@ function resolveEditorPrototype(app: App) {
     widgetEditorView.editable = true;
     widgetEditorView.showEditor();
     const MarkdownEditor = Object.getPrototypeOf(Object.getPrototypeOf(widgetEditorView.editMode!));
-    console.log('markdown editor', MarkdownEditor);
-    console.log('====================');
 
     // Unload to remove the temporary editor
     widgetEditorView.unload();
