@@ -179,17 +179,17 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
                 keymap.of([
                     {
                         key: 'Enter',
-                        run: (cm) => this.options.onEnter(this, false, false),
-                        shift: (cm) => this.options.onEnter(this, false, true),
+                        run: (_) => this.options.onEnter(this, false, false),
+                        shift: (_) => this.options.onEnter(this, false, true),
                     },
                     {
                         key: 'Mod-Enter',
-                        run: (cm) => this.options.onEnter(this, true, false),
-                        shift: (cm) => this.options.onEnter(this, true, true),
+                        run: (_) => this.options.onEnter(this, true, false),
+                        shift: (_) => this.options.onEnter(this, true, true),
                     },
                     {
                         key: 'Escape',
-                        run: (cm) => {
+                        run: (_) => {
                             this.options.onEscape(this);
                             return true;
                         },
