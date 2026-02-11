@@ -99,7 +99,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
         //     2) Execute the command callback
         //     3) Return the result of the callback (callback returns false if callback could not execute)
         //             (In this case, if cursor is not on a link token, the callback will return false, and onEnter will be applied)
-        this.scope.register(['Mod'], 'Enter', (e, ctx) => {
+        this.scope.register(['Mod'], 'Enter', (_, __) => {
             return true;
         });
 
