@@ -75,11 +75,10 @@
         withAccessKeys = provideAccessKeys;
 
         mountComplete = true;
-        _initEditor();
-        _focusEditor();
+        _initEditor().then(() => _focusEditor());
     });
 
-    const _initEditor = () => {
+    const _initEditor = async () => {
         mdEditor = new EmbeddableMarkdownEditor(app, mdEditorElement, {
             value: `${editableTask.description}`,
             placeholder: 'Take out the trash',
