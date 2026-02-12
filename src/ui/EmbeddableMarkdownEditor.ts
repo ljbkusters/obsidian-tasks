@@ -87,6 +87,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
             // This mocks the MarkdownView functions, which is required for proper functioning of scrolling
             onMarkdownScroll: () => {},
             getMode: () => 'source',
+            syncScroll: (_pos: number) => {},
         });
         this.options = { ...defaultProperties, ...options };
         this.initial_value = this.options.value!;
