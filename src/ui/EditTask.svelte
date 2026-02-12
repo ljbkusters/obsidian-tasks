@@ -75,7 +75,11 @@
         withAccessKeys = provideAccessKeys;
 
         mountComplete = true;
+        _initEditor();
+        _focusEditor();
+    });
 
+    const _initEditor = () => {
         mdEditor = new EmbeddableMarkdownEditor(app, mdEditorElement, {
             value: `${editableTask.description}`,
             placeholder: 'Take out the trash',
@@ -93,13 +97,9 @@
             },
             onEscape: () => _onClose(),
         });
-        mdEditor.onEditorClick = (event: MouseEvent, element: HTMLElement | undefined) => {
-            console.log(event);
-        };
-        // set the cursor to the final character
+        // set the cursor to the final character on intial load
         mdEditor.editor?.setCursor(mdEditor.get().length);
-        _focusEditor();
-    });
+    };
 
     const _focusEditor = () => {
         setTimeout(() => {
